@@ -1,0 +1,4 @@
+dateStr, participantId,clockwise,correct, rt, sessionNo, trialNo, rotation, noise, triggerTime, responseStart, responseEnd
+2021_Dec_15_1538, ID, -1, 1, 0.7177422700005991, 1, 0, 0, 0, NA, NA, NA
+2021_Dec_15_1538, ID, -1, 1, 0.3657372140005464, 1, 1, 0, 0, NA, NA, NA
+2021_Dec_15_1538, ID, 1, 1, 0.4579746529998374, 1, 2, 0, 0, NA, NA, NA
