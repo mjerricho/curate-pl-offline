@@ -1,4 +1,2 @@
-import random
-
-targetSide = random.choice([-1,1]) 
-print(targetSide)
+bla = [1 if True else 3 - 2, 2, 3 ]
+print(bla)

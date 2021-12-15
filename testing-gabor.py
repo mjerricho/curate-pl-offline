@@ -11,7 +11,7 @@ fixation = visual.GratingStim(win, color=1, colorSpace='rgb',
                               tex=None, mask='cross', size=0.2)
 noise = visual.NoiseStim(win, sf = 1, size=4, noiseElementSize=0.05,  mask='gauss', noiseType='uniform', blendmode='avg')
 
-#target.draw()
+target.draw()
 noise.draw()
 win.flip()
 event.waitKeys()

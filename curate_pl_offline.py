@@ -19,7 +19,7 @@ else:
 try:  
     expInfo = fromFile(expId + 'lastParams.pickle')
 except:  # if not there then use a default set
-    expInfo = {'participantId': expId, 'sessionNo': 0, 'absRotation': 0, 'absNoise': 0}
+    expInfo = {'participantId': expId, 'sessionNo': 0, 'difficultyRotation': 0, 'difficultyNoise': 0}
     print("new experiment info created")
 
 expInfo['dateStr'] = data.getDateStr()
@@ -81,105 +81,215 @@ event.waitKeys()
 responseMessage = visual.TextStim(win, pos=[0,0], text="anti-clockwise (left) or clockwise (right)", units='pix', height=50)
 
 # warm up  ----------------------------------------------------------
-warmupMessage = visual.TextStim(win, pos=[0,0], text="This is just a warm up trial.", units='pix', height=50)
-warmupMessage.draw()
-win.flip()
-core.wait(4)
-
-# set up parameters
-initialOri = 20
-finalOri = 30
-foil.setOri(initialOri)
-target.setOri(finalOri)
-
-# draw stimuli
-fixation.draw()
-win.flip()
-core.wait(2)
-
-foil.draw()
-win.flip()
-core.wait(2)
-target.draw()
-win.flip()
-core.wait(2)
-
-responseMessage.draw()
-win.flip()
-result = event.waitKeys()
-print(result[0])
-if result[0] == 'right':
-    correctMessage = visual.TextStim(win, pos=[0,0], text="Correct! It was clockwise (right).", units='pix', height=50)
-    correctMessage.draw()
-    win.flip()
-    core.wait(3)
-else : 
-    falseMessage = visual.TextStim(win, pos=[0,0], text="Wrong! It was clockwise (right).", units='pix', height=50)
-    falseMessage.draw()
-    win.flip()
-    core.wait(3)
+#warmupMessage = visual.TextStim(win, pos=[0,0], text="This is just a warm up trial.", units='pix', height=50)
+#warmupMessage.draw()
+#win.flip()
+#core.wait(4)
+#
+## set up parameters
+#initialOri = 20
+#finalOri = 30
+#foil.setOri(initialOri)
+#target.setOri(finalOri)
+#
+## draw stimuliq
+#fixation.draw()
+#win.flip()
+#core.wait(2)
+#
+#foil.draw()
+#win.flip()
+#core.wait(2)
+#target.draw()
+#win.flip()
+#core.wait(2)
+#
+#responseMessage.draw()
+#win.flip()
+#result = event.waitKeys()
+#print(result[0])
+#if result[0] == 'right':
+#    correctMessage = visual.TextStim(win, pos=[0,0], text="Correct! It was clockwise (right).", units='pix', height=50)
+#    correctMessage.draw()
+#    win.flip()
+#    core.wait(3)
+#else : 
+#    falseMessage = visual.TextStim(win, pos=[0,0], text="Wrong! It was clockwise (right).", units='pix', height=50)
+#    falseMessage.draw()
+#    win.flip()
+#    core.wait(3)
 
 # training/testing phase ---------------------------------------------
-targetSide = 0
-difficultyRotation = 0
-difficultyNoise = 0
+difficultyRotation = expInfo['difficultyRotation']
+difficultyNoise = expInfo['difficultyNoise']
 streak = 0
 
 # angle parameters
+clockwise = 0
+initialAngle = 0
+changeAngle = 0
+finalAngle = 0
+
+# setting up the rotation of the gabor
+def tuneRotation(difficultyRotation):
+    global clockwise
+    global initialAngle
+    global changeAngle
+    global finalAngle
+    clockwise = random.choice([-1,1]) 
+    initialAngle = random.randrange(0,90)
+    changeAngle = random.randrange(0,(40 - (2 * difficultyRotation)))
+    finalAngle = initialAngle + (clockwise * changeAngle)
+
+# setting up noise parameters
+def setUpGabor(initialAngle, finalAngle, difficultyNoise):
+    global foil
+    global target
+    opacity = difficultyNoise/20
+    foil.setOri(initialAngle)
+    noiseFoil = visual.NoiseStim(win, sf = 1, size=4, noiseElementSize=0.05,  mask='gauss', noiseType='uniform', blendmode='avg', ori=initialAngle, opacity=opacity)
+        
+    target.setOri(finalAngle)
+    noiseTarget = visual.NoiseStim(win, sf = 1, size=4, noiseElementSize=0.05,  mask='gauss', noiseType='uniform', blendmode='avg', ori=finalAngle, opacity=opacity)
+    return noiseFoil, noiseTarget
+
+# a function to draw the gabor
+def drawGabor(fixation, foil, noiseFoil, target, noiseTarget):
+    fixation.draw()
+    win.flip()
+    core.wait(1)
+
+    foil.draw()
+    noiseFoil.draw()
+    win.flip()
+    core.wait(1)
+    target.draw()
+    noiseTarget.draw()
+    win.flip()
+    core.wait(1)
+
+# function to get response 
+def getResponse(responseMessage, clockwise):
+    global trialClock
+    
+    responseMessage.draw()
+    win.flip()
+    trialClock.reset()
+    
+    reactionTime = 0
+    correct=None
+    while correct==None:
+        allKeys=event.waitKeys()
+        reactionTime = trialClock.getTime()
+        for thisKey in allKeys:
+            if thisKey=='left':
+                if clockwise==-1: correct = True  # correct
+                else: correct = False             # incorrect
+            elif thisKey=='right':
+                if clockwise== 1: correct = True  # correct
+                else: correct = False            # incorrect
+            elif thisKey in ['q', 'escape']:
+                core.quit()  # abort experiment
+    return reactionTime, correct
+    
+def writeData(expInfo, clockwise, correct, reactionTime, trialNo, difficultyRotation, difficultyNoise): 
+    global dataFile
+    dataFile.write('{dateStr}, {participantId}, {clockwise}, {correct}, {reactionTime}, {sessionNo}, {trialNo}, {rotation}, {noise}, NA, NA, NA\n'.format(dateStr = expInfo['dateStr'], participantId = expInfo['participantId'], clockwise = (clockwise == 1), correct = correct, reactionTime = reactionTime, sessionNo = expInfo['sessionNo'], trialNo = trialNo, rotation = difficultyRotation, noise = difficultyNoise))
+    core.wait(1)
 
 # first session
 if expInfo['sessionNo'] == 1 : 
-    for trialNo in range(nTrials) : 
+    for trialNo in range(1, nTrials + 1) : 
         # get the change in angle
-        targetSide = random.choice([-1,1]) 
-        initialAngle = random.randrange(0,90)
-        changeAngle = random.randrange(0,(40 - (2 * difficultyRotation)))
-        finalAngle = initialAngle + (targetSide * changeAngle)
-        
+        tuneRotation(difficultyRotation)
         # set up the gabor
-        foil.setOri(initialAngle)
-        noiseFoil = visual.NoiseStim(win, sf = 1, size=4, noiseElementSize=0.05,  mask='gauss', noiseType='uniform', blendmode='avg', ori=initialAngle, opacity=0)
-        
-        target.setOri(finalAngle)
-        noiseTarget = visual.NoiseStim(win, sf = 1, size=4, noiseElementSize=0.05,  mask='gauss', noiseType='uniform', blendmode='avg', ori=finalAngle, opacity=0)
-
+        noiseFoil, noiseTarget = setUpGabor(initialAngle, finalAngle, difficultyNoise)
         # drawing the gabor
-        fixation.draw()
-        win.flip()
-        core.wait(1)
-
-        foil.draw()
-        noiseFoil.draw()
-        win.flip()
-        core.wait(1)
-        target.draw()
-        noiseTarget.draw()
-        win.flip()
-        core.wait(1)
-        
-        responseMessage.draw()
-        win.flip()
-        trialClock.reset()
-        
-        reactionTime = 0
-        thisResp=None
-        while thisResp==None:
-            allKeys=event.waitKeys()
-            reactionTime = trialClock.getTime()
-            for thisKey in allKeys:
-                if thisKey=='left':
-                    if targetSide==-1: thisResp = 1  # correct
-                    else: thisResp = -1              # incorrect
-                elif thisKey=='right':
-                    if targetSide== 1: thisResp = 1  # correct
-                    else: thisResp = -1              # incorrect
-                elif thisKey in ['q', 'escape']:
-                    core.quit()  # abort experiment
-        
-        dataFile.write('{dateStr}, {participantId}, {clockwise}, {correct}, {reactionTime}, {sessionNo}, {trialNo}, {rotation}, {noise}, NA, NA, NA\n'.format(dateStr = expInfo['dateStr'], participantId = expInfo['participantId'], clockwise = targetSide, correct = thisResp, reactionTime = reactionTime, sessionNo = expInfo['sessionNo'], trialNo = trialNo, rotation = difficultyRotation, noise = difficultyNoise))
-        core.wait(1)
+        drawGabor(fixation, foil, noiseFoil, target, noiseTarget)
+        # get response
+        reactionTime, correct = getResponse(responseMessage, clockwise)
+        # write data
+        writeData(expInfo, clockwise, correct, reactionTime, trialNo, difficultyRotation, difficultyNoise)
+        # updating global parameters
+        if correct:
+            if streak == 2: 
+                streak = 0
+                difficultyRotation += 1
+            else: 
+                streak += 1
+        else: 
+            if difficultyRotation > 1 : 
+                difficultyRotation -= 1
+# second session
+elif expInfo['sessionNo'] == 2 : 
+    for trialNo in range(1, nTrials + 1) : 
+        # get the change in angle
+        tuneRotation(difficultyRotation)
+        # set up the gabor
+        noiseFoil, noiseTarget = setUpGabor(initialAngle, finalAngle, difficultyNoise)
+        # drawing the gabor
+        drawGabor(fixation, foil, noiseFoil, target, noiseTarget)
+        # get response
+        reactionTime, correct = getResponse(responseMessage, clockwise)
+        # write data
+        writeData(expInfo, clockwise, correct, reactionTime, trialNo, difficultyRotation, difficultyNoise)
+        # updating global parameters
+        if correct:
+            if streak == 2: 
+                streak = 0
+                difficultyNoise += 1
+            else: 
+                streak += 1
+        else: 
+            if difficultyNoise > 1 : 
+                difficultyNoise -= 1
+# after training sesiosns, split into low, medium and high
+elif expInfo['sessionNo'] > 2 : 
+    setDifficultyRotation = [0 if (difficultyRotation < 6) else (difficultyRotation - 6), difficultyRotation, difficultyRotation + 6]
+    setDifficultyNoise = [0 if (difficultyNoise < 6) else (difficultyNoise - 6), difficultyNoise, difficultyNoise + 6]
+    
+    for trialNo in range(1, nTrials + 1) : 
+        # low 
+        if trialNo <= 50: 
+            # get the change in angle
+            tuneRotation(setDifficultyRotation[0])
+            # set up the gabor
+            noiseFoil, noiseTarget = setUpGabor(initialAngle, finalAngle, setDifficultyNoise[0])
+            # drawing the gabor
+            drawGabor(fixation, foil, noiseFoil, target, noiseTarget)
+            # get response
+            reactionTime, correct = getResponse(responseMessage, clockwise)
+            # write data
+            writeData(expInfo, clockwise, correct, reactionTime, trialNo, setDifficultyRotation[0], setDifficultyNoise[0])
+        # med
+        if trialNo > 50 and trialNo <= 100: 
+            # get the change in angle
+            tuneRotation(setDifficultyRotation[1])
+            # set up the gabor
+            noiseFoil, noiseTarget = setUpGabor(initialAngle, finalAngle, setDifficultyNoise[1])
+            # drawing the gabor
+            drawGabor(fixation, foil, noiseFoil, target, noiseTarget)
+            # get response
+            reactionTime, correct = getResponse(responseMessage, clockwise)
+            # write data
+            writeData(expInfo, clockwise, correct, reactionTime, trialNo, setDifficultyRotation[1], setDifficultyNoise[1])
+        # high
+        if trialNo > 100: 
+            # get the change in angle
+            tuneRotation(setDifficultyRotation[2])
+            # set up the gabor
+            noiseFoil, noiseTarget = setUpGabor(initialAngle, finalAngle, setDifficultyNoise[2])
+            # drawing the gabor
+            drawGabor(fixation, foil, noiseFoil, target, noiseTarget)
+            # get response
+            reactionTime, correct = getResponse(responseMessage, clockwise)
+            # write data
+            writeData(expInfo, clockwise, correct, reactionTime, trialNo, setDifficultyRotation[2], setDifficultyNoise[2])
+            
 
 # updating last param ------------------------------------------------
 expInfo['dateStr'] = data.getDateStr()  # add the current time
+expInfo['difficultyRotation'] = difficultyRotation
+expInfo['difficultyNoise'] = difficultyNoise
 toFile(expId + 'lastParams.pickle', expInfo)  # save params to file for next time 
 print("experiment info updated")

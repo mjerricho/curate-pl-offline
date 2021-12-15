@@ -53,6 +53,8 @@ event.waitKeys()
 for thisIncrement in staircase:  # will continue the staircase until it terminates!
     # set location of stimuli
     targetSide= random.choice([-1,1])  # will be either +1(right) or -1(left)
+    
+    
     foil.setPos([-5*targetSide, 0])
     target.setPos([5*targetSide, 0])  # in other location
 
