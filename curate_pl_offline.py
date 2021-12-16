@@ -27,6 +27,7 @@ expInfo['sessionNo'] = expInfo['sessionNo'] + 1 # increase the session number
 print("start session no " + str(expInfo['sessionNo']) + ": " + str(expInfo))
 
 # start updating parameters for training and testing -----------------
+# change the number of nTrials to test the program between sessions.
 nTrials = 0
 if expInfo['sessionNo'] < 2 or expInfo['sessionNo'] > 8 : 
     nTrials = 98
