@@ -24,17 +24,14 @@ except:  # if not there then use a default set
 
 expInfo['dateStr'] = data.getDateStr()
 expInfo['sessionNo'] = expInfo['sessionNo'] + 1 # increase the session number
-#print(expInfo['sessionNo'])
+print("start session no " + str(expInfo['sessionNo']) + ": " + str(expInfo))
 
 # start updating parameters for training and testing -----------------
 nTrials = 0
-testType = ""
 if expInfo['sessionNo'] < 2 or expInfo['sessionNo'] > 8 : 
     nTrials = 98
-    testType = "3d1u"
 else : 
     nTrials = 150
-    testType = "scanner"
     
 # make a text file to save data --------------------------------------
 fileName = expInfo['participantId'] + "_" + expInfo['dateStr'] + "_sess_" + str(expInfo['sessionNo'])
@@ -54,70 +51,42 @@ fixation = visual.GratingStim(win, color=1, colorSpace='rgb',
 globalClock = core.Clock()
 trialClock = core.Clock()
 
+# write a function to expect an enter 
+def getResponseEnter() : 
+    while True:
+        response = event.waitKeys()
+        print(response[0])
+        if response[0] == "return":
+            break
+        elif response[0] == 'q':
+            core.quit()
+
+
 # Introduction and reminder to read the instructions
 message1 = visual.TextStim(win, pos=[0,+3],text='Hello, {}'.format(expInfo['participantId']), bold=True)
 message2 = visual.TextStim(win, pos=[0,0], text="Please read the following instructions carefully.", units='pix', height=30)
-message3 = visual.TextStim(win, pos=[0,-350], text="Press any key to continue.", units='pix', height=30)
+message3 = visual.TextStim(win, pos=[0,-350], text="Press return/enter key to continue.", units='pix', height=30)
 message1.draw()
 message2.draw()
 message3.draw()
 win.flip()
-event.waitKeys() #pause until there's a keypress
-
+getResponseEnter()
+    
 # instruction
 instructionText1 = 'In this experiment, you will see a white cross appear on the screen. Please focus your eyes on this circle about 2 feet (60cm) from your screen for the entirety of each session.'
 instructionText2 = 'Two patterns will appear in quick succession over the cross. Your task is to determine whether the second pattern is tilted clockwise or anti-clockwise relative to the first. Move the joystick to the left if the second pattern is tilted anti-clockwise, and the right if it is tilted clockwise.'
 message4 = visual.TextStim(win, pos=[0,+200],text=instructionText1, units='pix', height=19)
 message5 = visual.TextStim(win, pos=[0,-100],text=instructionText2, units='pix', height=19)
-message6 = visual.TextStim(win, pos=[0,-350], text="Press any key to continue.", units='pix', height=30)
+message6 = visual.TextStim(win, pos=[0,-350], text="Press return/enter key to continue.", units='pix', height=30)
 message4.draw()
 message5.draw()
 message6.draw()
 fixation.draw()
 win.flip()
-##pause until there's a keypress
-event.waitKeys()
+getResponseEnter()
 
-responseMessage = visual.TextStim(win, pos=[0,0], text="anti-clockwise (left) or clockwise (right)", units='pix', height=50)
-
-# warm up  ----------------------------------------------------------
-#warmupMessage = visual.TextStim(win, pos=[0,0], text="This is just a warm up trial.", units='pix', height=50)
-#warmupMessage.draw()
-#win.flip()
-#core.wait(4)
-#
-## set up parameters
-#initialOri = 20
-#finalOri = 30
-#foil.setOri(initialOri)
-#target.setOri(finalOri)
-#
-## draw stimuliq
-#fixation.draw()
-#win.flip()
-#core.wait(2)
-#
-#foil.draw()
-#win.flip()
-#core.wait(2)
-#target.draw()
-#win.flip()
-#core.wait(2)
-#
-#responseMessage.draw()
-#win.flip()
-#result = event.waitKeys()
-#print(result[0])
-#if result[0] == 'right':
-#    correctMessage = visual.TextStim(win, pos=[0,0], text="Correct! It was clockwise (right).", units='pix', height=50)
-#    correctMessage.draw()
-#    win.flip()
-#    core.wait(3)
-#else : 
-#    falseMessage = visual.TextStim(win, pos=[0,0], text="Wrong! It was clockwise (right).", units='pix', height=50)
-#    falseMessage.draw()
-#    win.flip()
-#    core.wait(3)
+# build response message to show when the user can key in response
+responseMessage = visual.TextStim(win, pos=[0,0], text="Type response now.\nanti-clockwise (left) or clockwise (right)", units='pix', height=40)
 
 # training/testing phase ---------------------------------------------
 difficultyRotation = expInfo['difficultyRotation']
@@ -155,27 +124,29 @@ def setUpGabor(initialAngle, finalAngle, difficultyNoise):
 
 # a function to draw the gabor
 def drawGabor(fixation, foil, noiseFoil, target, noiseTarget):
+    # set point of focus
     fixation.draw()
     win.flip()
-    core.wait(1)
-
+    core.wait(0.5)
+    # draw first gabor
     foil.draw()
     noiseFoil.draw()
     win.flip()
-    core.wait(1)
+    core.wait(0.5)
+    # draw rotated gabor
     target.draw()
     noiseTarget.draw()
     win.flip()
-    core.wait(1)
+    core.wait(0.5)
 
 # function to get response 
 def getResponse(responseMessage, clockwise):
     global trialClock
-    
+    # asking for response
     responseMessage.draw()
     win.flip()
     trialClock.reset()
-    
+    # checking response
     reactionTime = 0
     correct=None
     while correct==None:
@@ -195,8 +166,39 @@ def getResponse(responseMessage, clockwise):
 def writeData(expInfo, clockwise, correct, reactionTime, trialNo, difficultyRotation, difficultyNoise): 
     global dataFile
     dataFile.write('{dateStr}, {participantId}, {clockwise}, {correct}, {reactionTime}, {sessionNo}, {trialNo}, {rotation}, {noise}, NA, NA, NA\n'.format(dateStr = expInfo['dateStr'], participantId = expInfo['participantId'], clockwise = (clockwise == 1), correct = correct, reactionTime = reactionTime, sessionNo = expInfo['sessionNo'], trialNo = trialNo, rotation = difficultyRotation, noise = difficultyNoise))
-    core.wait(1)
+    print('{dateStr}, {participantId}, {clockwise}, {correct}, {reactionTime}, {sessionNo}, {trialNo}, {rotation}, {noise}, NA, NA, NA\n'.format(dateStr = expInfo['dateStr'], participantId = expInfo['participantId'], clockwise = (clockwise == 1), correct = correct, reactionTime = reactionTime, sessionNo = expInfo['sessionNo'], trialNo = trialNo, rotation = difficultyRotation, noise = difficultyNoise))
 
+# warm up
+warmupMessage = visual.TextStim(win, pos=[0,0], text="This is just a warm up trial.", units='pix', height=50)
+warmupMessage.draw()
+win.flip()
+core.wait(1)
+# get the change in angle
+tuneRotation(difficultyRotation)
+# set up the gabor
+noiseFoil, noiseTarget = setUpGabor(initialAngle, finalAngle, difficultyNoise)
+# drawing the gabor
+drawGabor(fixation, foil, noiseFoil, target, noiseTarget)
+# get response
+reactionTime, correct = getResponse(responseMessage, clockwise)
+# check if response is correct
+if correct: 
+    correctMessage = visual.TextStim(win, pos=[0,0], text="Correct response.", units='pix', height=50)
+    correctMessage.draw()
+    win.flip()
+    core.wait(1)
+else: 
+    falseMessage = visual.TextStim(win, pos=[0,0], text="Wrong response.", units='pix', height=50)
+    falseMessage.draw()
+    win.flip()
+    core.wait(1)
+    
+# start session
+startMessage = visual.TextStim(win, pos=[0,0], text="Sesion starts now. Press Enter/Return when you are ready.", units='pix', height=50)
+startMessage.draw()
+win.flip()
+getResponseEnter()
+    
 # first session
 if expInfo['sessionNo'] == 1 : 
     for trialNo in range(1, nTrials + 1) : 
@@ -291,5 +293,13 @@ elif expInfo['sessionNo'] > 2 :
 expInfo['dateStr'] = data.getDateStr()  # add the current time
 expInfo['difficultyRotation'] = difficultyRotation
 expInfo['difficultyNoise'] = difficultyNoise
-toFile(expId + 'lastParams.pickle', expInfo)  # save params to file for next time 
+# save params to file for next time 
+toFile(expId + 'lastParams.pickle', expInfo)  
 print("experiment info updated")
+print("end session no " + str(expInfo['sessionNo']) + ": " + str(expInfo))
+
+# end message
+endMessage = visual.TextStim(win, pos=[0,0], text="Thank you for participating in this study. Press Enter/Return to end the session.", units='pix', height=50)
+endMessage.draw()
+win.flip()
+getResponseEnter()
