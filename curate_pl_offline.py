@@ -94,7 +94,7 @@ difficultyRotation = expInfo['difficultyRotation']
 difficultyNoise = expInfo['difficultyNoise']
 streak = 0
 
-# angle parameters
+# angle parameters  
 clockwise = 0
 initialAngle = 0
 changeAngle = 0
