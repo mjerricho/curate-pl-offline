@@ -6,6 +6,8 @@ from psychopy.tools.filetools import fromFile, toFile
 import os
 import numpy, random
 
+import pandas as pd
+
 from datetime import date
 
 #defining all the functions---------
@@ -78,6 +80,7 @@ def writeData(expInfo, clockwise, correct, reactionTime, trialNo, difficultyRota
     dataFile.write('{dateStr}, {participantId}, {clockwise}, {correct}, {reactionTime}, {sessionNo}, {blockNo}, {trialNo}, {rotation}, {noise}, NA, NA, NA\n'.format( dateStr = expInfo['dateStr'], participantId = expInfo['participantId'], clockwise = (clockwise == 1), correct = correct, reactionTime = reactionTime, sessionNo = expInfo['sessionNo'], blockNo = expInfo['blockNo'], trialNo = trialNo, rotation = difficultyRotation, noise = difficultyNoise))
     print('{dateStr}, {participantId}, {clockwise}, {correct}, {reactionTime}, {sessionNo}, {blockNo}, {trialNo}, {rotation}, {noise}, NA, NA, NA\n'.format(dateStr = expInfo['dateStr'], participantId = expInfo['participantId'], clockwise = (clockwise == 1), correct = correct, reactionTime = reactionTime, sessionNo = expInfo['sessionNo'], blockNo = expInfo['blockNo'], trialNo = trialNo, rotation = difficultyRotation, noise = difficultyNoise))
 
+####################################################################REAL CODE START HERE#################################################################################################################################################################
 # getting parameters and other metadata ------------------------------
 # getting experiment id
 tempId= {'id': 'id'}
@@ -138,7 +141,11 @@ def getResponseEnter() :
 #    
 if sessType == "Thresholding": 
     
-    os.mkdir(str(expId)) #making directory
+    try: 
+        os.mkdir(str(expId)) #making directory
+    
+    except:
+        pass
     
     expInfo = {'participantId': expId, 'sessionNo': sessNo, "blockNo": 0, 'difficultyRotation': 0, 'difficultyNoise': 0}
     
@@ -275,8 +282,69 @@ if sessType == "Thresholding":
         else: 
             if difficultyRotation > 1 : 
                 difficultyRotation -= 1
+                
+    rot_threshold = difficultyRotation
     
+    #signifying the end of block 1 
+    message7 = visual.TextStim(win, pos=[0,0], text="End of block 1. Press enter to continue", units='pix', height=30)
+    message7.draw()
+    win.flip()
+    getResponseEnter()
+    
+    message8 = visual.TextStim(win, pos=[0,0], text="Starting Block 2", units='pix', height=30)
+    message8.draw()
+    core.wait(1)
+    fixation.draw()
+    win.flip()
+    core.wait(3)
+    
+    #starting block 2/ thresholding for noise
+    
+    #setting rotation for noise thresholding
+    if rot_threshold - 3 > 0:
+         difficultyRotation = rot_threshold - 3
+    else:
+          difficultyRotation = 0 
+
+    
+    expInfo["blockNo"] += 1 #adding 1 to current block
+    
+    for trialNo in range(1, nTrials + 1) : 
+        # get the change in angle
+        tuneRotation(difficultyRotation)
+        # set up the gabor
+        noiseFoil, noiseTarget = setUpGabor(initialAngle, finalAngle, difficultyNoise)
+        # drawing the gabor
+        drawGabor(fixation, foil, noiseFoil, target, noiseTarget)
+        # get response
+        reactionTime, correct = getResponse(responseMessage, clockwise)
+        # write data
+        writeData(expInfo, clockwise, correct, reactionTime, trialNo, difficultyRotation, difficultyNoise)
+        # updating global parameters
+        if correct:
+            if streak == 2: 
+                streak = 0
+                difficultyNoise += 1
+            else: 
+                streak += 1
+        else: 
+            if difficultyNoise > 1 : 
+                difficultyNoise -= 1
+                
         
+    noise_threshold = difficultyNoise
+    
+    # creating curate profile
+    #rotation = index 0, noise = index 1
+    
+    profile = {"low": [[rot_threshold - 6,noise_threshold - 6]] ,"medium": [[rot_threshold,noise_threshold]], "high": [[rot_threshold + 6,noise_threshold + 6]]}
+    
+    # Saving profile --------------------------------------
+    df = pd.DataFrame.from_dict(profile) 
+    df.to_csv(cd + "/" + str(expId) + "/" + str(expId) + "_profile.csv", index = False, header = True)
+    
+#    dataFile2 = open(cd + "/" + str(expId) + "/" + fileName2 + '.csv', 'w')  # a simple text file with 'comma-separated-values'
+#    dataFile2.write("{low}, {medium}, {high}".format(low = profile["low"], medium = profile["medium"], high = profile["high"]))
         
     # updating last param ------------------------------------------------
     expInfo['dateStr'] = data.getDateStr()  # add the current time
@@ -287,6 +355,12 @@ if sessType == "Thresholding":
     toFile(expId + 'lastParams.pickle', expInfo)  
     print("experiment info updated")
     print("end session no " + str(expInfo['sessionNo']) + ": " + str(expInfo))
+    
+    # end message
+    endMessage = visual.TextStim(win, pos=[0,0], text="Thank you for participating in this study. Press Enter/Return to end the session.", units='pix', height=50)
+    endMessage.draw()
+    win.flip()
+    getResponseEnter()
         
     
 
@@ -294,8 +368,137 @@ if sessType == "Thresholding":
 #    .
 #    .
 #    
-#    
-#    elif sessType == "Training":
+#    training selected
+elif sessType == "Training":
+    
+    cd = os.getcwd()
+        
+    dlgParticipant3 = gui.Dlg(title = expId + " settings")
+    dlgParticipant3.addFixedField("Session Type: ", sessType)
+    dlgParticipant3.addFixedField("Session Number: ", sessNo)
+    dlgParticipant3.addText("Default Training Setting?")
+    dlgParticipant3.addField("Default Setting", choices = ["Yes", "No"]) #index 2
+        
+    participantType3 = dlgParticipant3.show()
+    
+    if dlgParticipant3.OK:
+        default = participantType3[2]
+        print(participantType3)
+    
+    else:
+        core.quit() # the user hit cancel so exit
+        
+    
+    try:
+        cd = os.getcwd()
+        df = pd.read_csv(cd + "/" + str(expId) + "/" + str(expId) + "_profile.csv") #read participant profile 
+        
+    #check whether previous profile is present
+    except:
+        print("wrong participant id or threshold profile does not exist")
+        dlgParticipant5 = gui.Dlg(title = expId + " does not exist. Please re-enter participant ID")
+        dlgParticipant5.addField("Participant ID")
+        
+        participantType5 = dlgParticipant5.show()
+        
+        if dlgParticipant5.OK:
+            expId = participantType5[0]
+#            print(participantType5)
+        
+    
+    #difficulty setting values for L, M, H
+    L = df["low"].get(0)
+    M = df["medium"].get(0)
+    H = df["high"].get(0)
+    
+    print("[rot,noise]")
+    print("low = " + str(L))
+    print("medium = " + str(M))
+    print("high = " + str(H))
+        
+    if default =="No":
+        #getting custom sequence if default is no
+        dlgParticipant4 = gui.Dlg(title = expId + " custom sequence")
+        dlgParticipant4.addText("Please input sequence below e.g L,M,H,L,M,H")
+        dlgParticipant4.addField("Default Setting")
+        
+        participantType4 = dlgParticipant4.show()
+        
+        if dlgParticipant4.OK:
+            sequence = participantType4[0]
+            print(participantType4)
+        
+        else:
+            core.quit() # the user hit cancel so exit
+            
+    
+    else:  #user select defualt option option
+        
+        run_A = [L, M, H, M, H, L, H, L, M]
+        
+        run_B = [M, L, H, L, H, M, H, M, L]
+        
+        run_C = [M, H, L, H, L, M, L, M, H]
+        
+        run_D = [L, H, M, H, M, L, M, L, H]
+        
+        run_E = [H, L, M, L, M, H, M, H, L]
+        
+        run_F = [H, M, L, M, L, H, L, H, M]
+        
+        if sessNo == 2:
+            sequence = run_A
+            print(sequence)
+            
+        if sessNo == 3:
+            sequence = run_B
+            print(sequence)
+            
+        if sessNo == 4:
+            sequence = run_C
+            print(sequence)
+            
+        if sessNo == 5:
+            sequence = run_D
+            print(sequence)
+            
+        if sessNo == 6:
+            sequence = run_E
+            print(sequence)
+            
+        if sessNo == 7:
+            sequence = run_F
+            print(sequence)
+            
+        if sessNo == 8:
+            sequence = run_E
+            print(sequence)
+            
+        if sessNo == 9:
+            sequence = run_E
+            print(sequence)
+            
+        if sessNo == 10:
+            sequence = run_C
+            print(sequence)
+            
+        if sessNo == 11:
+            sequence = run_B
+            print(sequence)
+            
+        if sessNo == 12:
+            sequence = run_A
+            print(sequence)
+            
+        if sessNo == 13:
+            sequence = run_F
+            print(sequence)
+            
+        if sessNo == 14:
+            sequence = run_F
+            print(sequence)
+            
+        
 
     #get details from config file given the session number
     #
