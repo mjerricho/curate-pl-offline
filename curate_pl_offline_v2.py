@@ -424,6 +424,7 @@ elif sessType == "Training":
         
         participantType4 = dlgParticipant4.show()
         
+        #need to code try and except depend on how u use it
         if dlgParticipant4.OK:
             sequence = participantType4[0]
             print(participantType4)
