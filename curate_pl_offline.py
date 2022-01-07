@@ -199,6 +199,7 @@ startMessage = visual.TextStim(win, pos=[0,0], text="Sesion starts now. Press En
 startMessage.draw()
 win.flip()
 getResponseEnter()
+core.wait(1) #wait for 1 second before beginning next sesession
     
 # first session
 if expInfo['sessionNo'] == 1 : 
