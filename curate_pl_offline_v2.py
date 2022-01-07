@@ -435,68 +435,58 @@ elif sessType == "Training":
     
     else:  #user select defualt option option
         
-        run_A = [L, M, H, M, H, L, H, L, M]
-        
-        run_B = [M, L, H, L, H, M, H, M, L]
-        
-        run_C = [M, H, L, H, L, M, L, M, H]
-        
-        run_D = [L, H, M, H, M, L, M, L, H]
-        
-        run_E = [H, L, M, L, M, H, M, H, L]
-        
-        run_F = [H, M, L, M, L, H, L, H, M]
+        runs = {"run_A" = [L, M, H, M, H, L, H, L, M], "run_B" = [M, L, H, L, H, M, H, M, L], "run_C" = [M, H, L, H, L, M, L, M, H],"run_D" = [L, H, M, H, M, L, M, L, H], "run_E" = [H, L, M, L, M, H, M, H, L],"run_F" = [H, M, L, M, L, H, L, H, M]}
         
         if sessNo == 2:
-            sequence = run_A
+            sequence = run["run_A"]
             print(sequence)
             
         if sessNo == 3:
-            sequence = run_B
+            sequence = run["run_B"]
             print(sequence)
             
         if sessNo == 4:
-            sequence = run_C
+            sequence = run["run_C"]
             print(sequence)
             
         if sessNo == 5:
-            sequence = run_D
+            sequence = run["run_D"]
             print(sequence)
             
         if sessNo == 6:
-            sequence = run_E
+            sequence = run["run_E"]
             print(sequence)
             
         if sessNo == 7:
-            sequence = run_F
+            sequence = run["run_F"]
             print(sequence)
             
         if sessNo == 8:
-            sequence = run_E
+            sequence = run["run_E"]
             print(sequence)
             
         if sessNo == 9:
-            sequence = run_E
+            sequence = run["run_D"]
             print(sequence)
             
         if sessNo == 10:
-            sequence = run_C
+            sequence = run["run_C"]
             print(sequence)
             
         if sessNo == 11:
-            sequence = run_B
+            sequence = run["run_B"]
             print(sequence)
             
         if sessNo == 12:
-            sequence = run_A
+            sequence = run["run_A"]
             print(sequence)
             
         if sessNo == 13:
-            sequence = run_F
+            sequence = run["run_F"]
             print(sequence)
             
         if sessNo == 14:
-            sequence = run_F
+            sequence = run["run_E"]
             print(sequence)
             
         
