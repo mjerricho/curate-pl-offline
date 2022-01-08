@@ -1,55 +1,53 @@
 # Curate-pl-offline implementation
-# version: 27-12-21
-# --------------------------------------------------------------------
+# version: 08-01-22
+# --------------------------------------------------------------------------
 from psychopy import core, visual, gui, data, event
 from psychopy.tools.filetools import fromFile, toFile
 import os
 import numpy, random
-
 import pandas as pd
-
 from datetime import date
 
-#defining all the functions---------
-
+# defining essential functions ---------------------------------------------
 def tuneRotation(difficultyRotation):
     global clockwise
     global initialAngle
-    global changeAngle
+    global deltaAngle
     global finalAngle
     clockwise = random.choice([-1,1]) 
     initialAngle = random.randrange(0,90)
-    changeAngle = random.randrange(0,(40 - (2 * difficultyRotation)))
-    finalAngle = initialAngle + (clockwise * changeAngle)
+    # TODO - deltaAngle needs revision
+    deltaAngle = random.randrange(0,(40 - (2 * difficultyRotation)))
+    finalAngle = initialAngle + (clockwise * deltaAngle)
 
 # setting up noise parameters
 def setUpGabor(initialAngle, finalAngle, difficultyNoise):
-    global foil
-    global target
+    global initialGabor
+    global finalGabor
+    # TODO - opacity needs revision
     opacity = difficultyNoise/20
-    foil.setOri(initialAngle)
-    noiseFoil = visual.NoiseStim(win, sf = 1, size=4, noiseElementSize=0.05,  mask='gauss', noiseType='uniform', blendmode='avg', ori=initialAngle, opacity=opacity)
-        
-    target.setOri(finalAngle)
-    noiseTarget = visual.NoiseStim(win, sf = 1, size=4, noiseElementSize=0.05,  mask='gauss', noiseType='uniform', blendmode='avg', ori=finalAngle, opacity=opacity)
-    return noiseFoil, noiseTarget
+    initialGabor.setOri(initialAngle)
+    initialNoise = visual.NoiseStim(win, sf = 1, size=4, noiseElementSize=0.05,  mask='gauss', noiseType='uniform', blendmode='avg', ori=initialAngle, opacity=opacity)
+    finalGabor.setOri(finalAngle)
+    finalNoise = visual.NoiseStim(win, sf = 1, size=4, noiseElementSize=0.05,  mask='gauss', noiseType='uniform', blendmode='avg', ori=finalAngle, opacity=opacity)
+    return initialNoise, finalNoise
 
 # a function to draw the gabor
-def drawGabor(fixation, foil, noiseFoil, target, noiseTarget):
+def drawGabor(fixation, initialGabor, initialNoise, finalGabor, finalNoise):
     # set point of focus
     fixation.draw()
     win.flip()
-    core.wait(0.5)
+    core.wait(0.5) # TODO - time between gabor needs revision
     # draw first gabor
-    foil.draw()
-    noiseFoil.draw()
+    initialGabor.draw()
+    initialNoise.draw()
     win.flip()
-    core.wait(0.5)
+    core.wait(0.5) # TODO - time when initial Gabor is shown needs revision
     # draw rotated gabor
-    target.draw()
-    noiseTarget.draw()
+    finalGabor.draw()
+    finalNoise.draw()
     win.flip()
-    core.wait(0.5)
+    core.wait(0.5) # TODO - time when final Gabor is shown needs revision
 
 # function to get response 
 def getResponse(responseMessage, clockwise):
@@ -60,28 +58,45 @@ def getResponse(responseMessage, clockwise):
     trialClock.reset()
     # checking response
     reactionTime = 0
-    correct=None
-    while correct==None:
-        allKeys=event.waitKeys()
+    correct = None
+    while correct == None:
+        allKeys = event.waitKeys()
         reactionTime = trialClock.getTime()
         for thisKey in allKeys:
-            if thisKey=='left':
-                if clockwise==-1: correct = True  # correct
-                else: correct = False             # incorrect
+            if thisKey == 'left':
+                correct = True if clockwise == -1 else False
             elif thisKey=='right':
-                if clockwise== 1: correct = True  # correct
-                else: correct = False            # incorrect
+                correct = True if clockwise == 1 else False
             elif thisKey in ['q', 'escape']:
                 core.quit()  # abort experiment
     return reactionTime, correct
     
+# write a function to expect an enter 
+def getResponseEnter() : 
+    while True:
+        response = event.waitKeys()
+        print(response[0])
+        if response[0] == "return":
+            break
+        elif response[0] == 'q':
+            core.quit()
+    
 def writeData(expInfo, clockwise, correct, reactionTime, trialNo, difficultyRotation, difficultyNoise): 
     global dataFile
-    dataFile.write('{dateStr}, {participantId}, {clockwise}, {correct}, {reactionTime}, {sessionNo}, {blockNo}, {trialNo}, {rotation}, {noise}, NA, NA, NA\n'.format( dateStr = expInfo['dateStr'], participantId = expInfo['participantId'], clockwise = (clockwise == 1), correct = correct, reactionTime = reactionTime, sessionNo = expInfo['sessionNo'], blockNo = expInfo['blockNo'], trialNo = trialNo, rotation = difficultyRotation, noise = difficultyNoise))
+    dataFile.write('{dateStr}, {participantId}, {clockwise}, {correct}, {reactionTime}, {sessionNo}, {blockNo}, {trialNo}, {rotation}, {noise}, NA, NA, NA\n'.format(dateStr = expInfo['dateStr'], participantId = expInfo['participantId'], clockwise = (clockwise == 1), correct = correct, reactionTime = reactionTime, sessionNo = expInfo['sessionNo'], blockNo = expInfo['blockNo'], trialNo = trialNo, rotation = difficultyRotation, noise = difficultyNoise))
     print('{dateStr}, {participantId}, {clockwise}, {correct}, {reactionTime}, {sessionNo}, {blockNo}, {trialNo}, {rotation}, {noise}, NA, NA, NA\n'.format(dateStr = expInfo['dateStr'], participantId = expInfo['participantId'], clockwise = (clockwise == 1), correct = correct, reactionTime = reactionTime, sessionNo = expInfo['sessionNo'], blockNo = expInfo['blockNo'], trialNo = trialNo, rotation = difficultyRotation, noise = difficultyNoise))
 
-####################################################################REAL CODE START HERE#################################################################################################################################################################
-# getting parameters and other metadata ------------------------------
+# end message
+def showEndMessage(): 
+    print("experiment info updated")
+    print("end session no " + str(expInfo['sessionNo']) + ": " + str(expInfo))
+    endMessage = visual.TextStim(win, pos=[0,0], text="Thank you for participating in this study. Press Enter/Return to end the session.", units='pix', height=50)
+    endMessage.draw()
+    win.flip()
+    getResponseEnter()
+
+########################EXPERIMENT CODE START HERE##########################
+# getting parameters and other metadata ------------------------------------
 # getting experiment id
 tempId= {'id': 'id'}
 expId= ""
@@ -92,135 +107,96 @@ else:
     core.quit() # the user hit cancel so exit
  
 sessType = ""
+sessionNo = None
  
-dlgParticipant = gui.Dlg(title = expId + " settings")
-dlgParticipant.addField("Session Type", choices = ["Thresholding", "Training"]) #index 0
-dlgParticipant.addField("Session: ") #index 1
+# ensure the user inserts an integer for the session number
+while True:
+    dlgParticipant = gui.Dlg(title = expId + " settings")
+    dlgParticipant.addField("Session Type", choices = ["Thresholding", "Training"]) #index 0
+    dlgParticipant.addField("Session: ") #index 1
+    
+    participantType = dlgParticipant.show()
 
-
-participantType = dlgParticipant.show()
-
-if dlgParticipant.OK:
-    sessType = participantType[0]
-    sessNo = participantType[1]
-    print(participantType)
-    
-else:
-    core.quit() # the user hit cancel so exit
-    
-try:
-    int(sessNo)
-except:
-    print("Session number invalid")
-    
-    dlgParticipant2 = gui.Dlg(title = expId + " settings")
-    dlgParticipant2.addText("Session number invalid")
-    dlgParticipant2.addFixedField("Session Type: ", sessType)
-    dlgParticipant2.addField("Session: ")
-    
-    participantType2 = dlgParticipant2.show()
-    
-    if dlgParticipant2.OK:
-        sessNo = participantType2[1]
-        print(participantType2)
-    
+    if dlgParticipant.OK:
+        sessType = participantType[0]
+        if participantType[1].isnumeric() : 
+            sessionNo = int(participantType[1])
+            print(participantType)
+            break
     else:
         core.quit() # the user hit cancel so exit
-#    
-        
-# write a function to expect an enter 
-def getResponseEnter() : 
-    while True:
-        response = event.waitKeys()
-        print(response[0])
-        if response[0] == "return":
-            break
-        elif response[0] == 'q':
-            core.quit()
 
-#    
+# initialise experiment info and datafile ----------------------------------
+cwd = os.getcwd()
+try: 
+    os.mkdir(str(expId)) 
+    # making directory, returns an error if directory already exists
+except:
+    pass
+
+expInfo = {'participantId': expId, 'sessionNo': sessionNo, "blockNo": 0, 'difficultyRotation': 0, 'difficultyNoise': 0, 'dateStr': data.getDateStr()}
+print("start session no " + str(expInfo['sessionNo']) + ": " + str(expInfo))
+
+# make a csv file to save data -----------------------------------------
+fileName = expInfo['participantId'] + "_" + date.today().strftime("%d_%m_%Y") + "_sess_" + str(expInfo['sessionNo'])
+dataFile = open(cwd + "/" + str(expId) + "/" + fileName + '.csv', 'w')
+try: 
+    dataFile.write('dateStr, participantId,clockwise,correct, rt, sessionNo, blockNo, trialNo, rotation, noise, triggerTime, responseStart, responseEnd\n')
+except:
+    print("This session data already exists") # TODO - clarify what to do
+    
+# setting up parameters and instructions ---------------------------------
+# create window and stimuli
+win = visual.Window([1500,900],allowGUI=True,
+                    monitor='testMonitor', units='deg')
+initialGabor = visual.GratingStim(win, sf=1, size=4, mask='gauss')
+finalGabor = visual.GratingStim(win, sf=1, size=4, mask='gauss')
+fixation = visual.GratingStim(win, color=1, colorSpace='rgb', tex=None, mask='cross', size=0.2)
+                              
+# and clocks to keep track of time
+globalClock = core.Clock()
+trialClock = core.Clock()
+
+# Introduction and reminder to read the instructions
+message1 = visual.TextStim(win, pos=[0,+3],text='Hello, {}'.format(expInfo['participantId']), bold=True)
+message2 = visual.TextStim(win, pos=[0,0], text="Please read the following instructions carefully.", units='pix', height=30)
+message3 = visual.TextStim(win, pos=[0,-350], text="Press return/enter key to continue.", units='pix', height=30)
+message1.draw()
+message2.draw()
+message3.draw()
+win.flip()
+getResponseEnter()
+    
+# instruction
+instructionText1 = 'In this experiment, you will see a white cross appear on the screen. Please focus your eyes on this circle about 2 feet (60cm) from your screen for the entirety of each session.'
+instructionText2 = 'Two patterns will appear in quick succession over the cross. Your task is to determine whether the second pattern is tilted clockwise or anti-clockwise relative to the first. Move the joystick to the left if the second pattern is tilted anti-clockwise, and the right if it is tilted clockwise.'
+message4 = visual.TextStim(win, pos=[0,+200],text=instructionText1, units='pix', height=19)
+message5 = visual.TextStim(win, pos=[0,-100],text=instructionText2, units='pix', height=19)
+message6 = visual.TextStim(win, pos=[0,-350], text="Press return/enter key to continue.", units='pix', height=30)
+message4.draw()
+message5.draw()
+message6.draw()
+fixation.draw()
+win.flip()
+getResponseEnter()
+
+# build response message to show when the user can key in response
+responseMessage = visual.TextStim(win, pos=[0,0], text="Type response now.\nanti-clockwise (left) or clockwise (right)", units='pix', height=40)
+        
+# Thresholding case --------------------------------------------------------
 if sessType == "Thresholding": 
-    
-    try: 
-        os.mkdir(str(expId)) #making directory
-    
-    except:
-        pass
-    
-    expInfo = {'participantId': expId, 'sessionNo': sessNo, "blockNo": 0, 'difficultyRotation': 0, 'difficultyNoise': 0}
-    
-    expInfo['dateStr'] = data.getDateStr()
-    print("start session no " + str(expInfo['sessionNo']) + ": " + str(expInfo))
-    
-    nTrials = 5 #trial number 
-    
-    cd = os.getcwd()
-
-    # make a text file to save data --------------------------------------
-    fileName = expInfo['participantId'] + "_" + date.today().strftime("%d_%m_%Y") + "_sess_" + str(expInfo['sessionNo'])
-    dataFile = open(cd + "/" + str(expId) + "/" + fileName + '.csv', 'w')  # a simple text file with 'comma-separated-values'
-    
-    try: 
-        dataFile.write('dateStr, participantId,clockwise,correct, rt, sessionNo, blockNo, trialNo, rotation, noise, triggerTime, responseStart, responseEnd\n')
-        
-    except:
-        print("participant already exists")
-        
-    # setting up parameters and instructions -------------------------------
-    # create window and stimuli
-    win = visual.Window([1500,900],allowGUI=True,
-                        monitor='testMonitor', units='deg')
-    foil = visual.GratingStim(win, sf=1, size=4, mask='gauss')
-    target = visual.GratingStim(win, sf=1, size=4, mask='gauss')
-    fixation = visual.GratingStim(win, color=1, colorSpace='rgb',
-                                  tex=None, mask='cross', size=0.2)
-                                  
-    # and some handy clocks to keep track of time
-    globalClock = core.Clock()
-    trialClock = core.Clock()
-    
-        
-    # Introduction and reminder to read the instructions
-    message1 = visual.TextStim(win, pos=[0,+3],text='Hello, {}'.format(expInfo['participantId']), bold=True)
-    message2 = visual.TextStim(win, pos=[0,0], text="Please read the following instructions carefully.", units='pix', height=30)
-    message3 = visual.TextStim(win, pos=[0,-350], text="Press return/enter key to continue.", units='pix', height=30)
-    message1.draw()
-    message2.draw()
-    message3.draw()
-    win.flip()
-    getResponseEnter()
-        
-    # instruction
-    instructionText1 = 'In this experiment, you will see a white cross appear on the screen. Please focus your eyes on this circle about 2 feet (60cm) from your screen for the entirety of each session.'
-    instructionText2 = 'Two patterns will appear in quick succession over the cross. Your task is to determine whether the second pattern is tilted clockwise or anti-clockwise relative to the first. Move the joystick to the left if the second pattern is tilted anti-clockwise, and the right if it is tilted clockwise.'
-    message4 = visual.TextStim(win, pos=[0,+200],text=instructionText1, units='pix', height=19)
-    message5 = visual.TextStim(win, pos=[0,-100],text=instructionText2, units='pix', height=19)
-    message6 = visual.TextStim(win, pos=[0,-350], text="Press return/enter key to continue.", units='pix', height=30)
-    message4.draw()
-    message5.draw()
-    message6.draw()
-    fixation.draw()
-    win.flip()
-    getResponseEnter()
-
-    # build response message to show when the user can key in response
-    responseMessage = visual.TextStim(win, pos=[0,0], text="Type response now.\nanti-clockwise (left) or clockwise (right)", units='pix', height=40)
-    
-        
     # training/testing phase ---------------------------------------------
     difficultyRotation = expInfo['difficultyRotation']
     difficultyNoise = expInfo['difficultyNoise']
     streak = 0
     
-        
     # angle parameters  
     clockwise = 0
     initialAngle = 0
-    changeAngle = 0
+    deltaAngle = 0
     finalAngle = 0
         
-        
-    # warm up
+    # warm up TODO - should we do more than one? we can use for-loop
     warmupMessage = visual.TextStim(win, pos=[0,0], text="This is just a warm up trial.", units='pix', height=50)
     warmupMessage.draw()
     win.flip()
@@ -228,9 +204,9 @@ if sessType == "Thresholding":
     # get the change in angle
     tuneRotation(difficultyRotation)
     # set up the gabor
-    noiseFoil, noiseTarget = setUpGabor(initialAngle, finalAngle, difficultyNoise)
+    initialNoise, finalNoise = setUpGabor(initialAngle, finalAngle, difficultyNoise)
     # drawing the gabor
-    drawGabor(fixation, foil, noiseFoil, target, noiseTarget)
+    drawGabor(fixation, initialGabor, initialNoise, finalGabor, finalNoise)
     # get response
     reactionTime, correct = getResponse(responseMessage, clockwise)
     # check if response is correct
@@ -245,8 +221,9 @@ if sessType == "Thresholding":
         win.flip()
         core.wait(1)
         
-
-    # start session
+    # start session -----
+    # TODO - EDIT N PARAMETER
+    nTrials = 5 
     startMessage = visual.TextStim(win, pos=[0,0], text="Sesion starts now. Press Enter/Return when you are ready.", units='pix', height=50)
     startMessage.draw()
     win.flip()
@@ -255,19 +232,14 @@ if sessType == "Thresholding":
     
     expInfo["blockNo"] += 1 #adding 1 to current block
     
-    # angle parameters reset 
-    clockwise = 0
-    initialAngle = 0
-    changeAngle = 0
-    finalAngle = 0
-    
+    # only changing the difficultyRotation
     for trialNo in range(1, nTrials + 1) : 
         # get the change in angle
         tuneRotation(difficultyRotation)
         # set up the gabor
-        noiseFoil, noiseTarget = setUpGabor(initialAngle, finalAngle, difficultyNoise)
+        initialNoise, finalNoise = setUpGabor(initialAngle, finalAngle, difficultyNoise)
         # drawing the gabor
-        drawGabor(fixation, foil, noiseFoil, target, noiseTarget)
+        drawGabor(fixation, initialGabor, initialNoise, finalGabor, finalNoise)
         # get response
         reactionTime, correct = getResponse(responseMessage, clockwise)
         # write data
@@ -294,28 +266,23 @@ if sessType == "Thresholding":
     message8 = visual.TextStim(win, pos=[0,0], text="Starting Block 2", units='pix', height=30)
     message8.draw()
     core.wait(1)
-    fixation.draw()
     win.flip()
-    core.wait(3)
     
-    #starting block 2/ thresholding for noise
+    #starting block 2/ thresholding for noise --------
     
     #setting rotation for noise thresholding
-    if rot_threshold - 3 > 0:
-         difficultyRotation = rot_threshold - 3
-    else:
-          difficultyRotation = 0 
+    difficultyRotation = rot_threshold - 3 if rot_threshold > 3 else 0
 
-    
     expInfo["blockNo"] += 1 #adding 1 to current block
     
+    # only changing the difficultyNoise
     for trialNo in range(1, nTrials + 1) : 
         # get the change in angle
         tuneRotation(difficultyRotation)
         # set up the gabor
-        noiseFoil, noiseTarget = setUpGabor(initialAngle, finalAngle, difficultyNoise)
+        initialNoise, finalNoise = setUpGabor(initialAngle, finalAngle, difficultyNoise)
         # drawing the gabor
-        drawGabor(fixation, foil, noiseFoil, target, noiseTarget)
+        drawGabor(fixation, initialGabor, initialNoise, finalGabor, finalNoise)
         # get response
         reactionTime, correct = getResponse(responseMessage, clockwise)
         # write data
@@ -331,87 +298,54 @@ if sessType == "Thresholding":
             if difficultyNoise > 1 : 
                 difficultyNoise -= 1
                 
-        
     noise_threshold = difficultyNoise
+    low_rot_threshold = 0 if rot_threshold < 6 else rot_threshold - 6
+    low_noise_threshold = 0 if noise_threshold < 6 else noise_threshold - 6
     
-    # creating curate profile
-    #rotation = index 0, noise = index 1
-    
-    profile = {"low": [[rot_threshold - 6,noise_threshold - 6]] ,"medium": [[rot_threshold,noise_threshold]], "high": [[rot_threshold + 6,noise_threshold + 6]]}
-    
-    # Saving profile --------------------------------------
+    # creating and saving curate profile
+    # rotation = first row, noise = second row
+    profile = {"low": [low_rot_threshold,low_noise_threshold], "medium": [rot_threshold,noise_threshold], "high": [rot_threshold + 6,noise_threshold + 6]}
     df = pd.DataFrame.from_dict(profile) 
-    df.to_csv(cd + "/" + str(expId) + "/" + str(expId) + "_profile.csv", index = False, header = True)
+    df.to_csv(cwd + "/" + str(expId) + "/" + str(expId) + "_profile.csv", index = False, header = True)
     
-#    dataFile2 = open(cd + "/" + str(expId) + "/" + fileName2 + '.csv', 'w')  # a simple text file with 'comma-separated-values'
-#    dataFile2.write("{low}, {medium}, {high}".format(low = profile["low"], medium = profile["medium"], high = profile["high"]))
+# backup
+# dataFile2 = open(cwd + "/" + str(expId) + "/" + fileName2 + '.csv', 'w')  # a simple text file with 'comma-separated-values'
+# dataFile2.write("{low}, {medium}, {high}".format(low = profile["low"], medium = profile["medium"], high = profile["high"]))
         
-    # updating last param ------------------------------------------------
-    expInfo['dateStr'] = data.getDateStr()  # add the current time
-    expInfo['difficultyRotation'] = difficultyRotation
-    expInfo['difficultyNoise'] = difficultyNoise
+    showEndMessage()
     
-    # save params to file for next time 
-    toFile(expId + 'lastParams.pickle', expInfo)  
-    print("experiment info updated")
-    print("end session no " + str(expInfo['sessionNo']) + ": " + str(expInfo))
-    
-    # end message
-    endMessage = visual.TextStim(win, pos=[0,0], text="Thank you for participating in this study. Press Enter/Return to end the session.", units='pix', height=50)
-    endMessage.draw()
-    win.flip()
-    getResponseEnter()
-        
-    
-
-#    .
-#    .
-#    .
-#    
-#    training selected
+# training selected --------------------------------------------------------
 elif sessType == "Training":
-    
-    cd = os.getcwd()
-        
+    # asking for whether the participant/experimenter want a default setting or not
     dlgParticipant3 = gui.Dlg(title = expId + " settings")
     dlgParticipant3.addFixedField("Session Type: ", sessType)
-    dlgParticipant3.addFixedField("Session Number: ", sessNo)
-    dlgParticipant3.addText("Default Training Setting?")
-    dlgParticipant3.addField("Default Setting", choices = ["Yes", "No"]) #index 2
-        
+    dlgParticipant3.addFixedField("Session Number: ", sessionNo)
+    dlgParticipant3.addField("Default Training Setting?", choices = ["Yes", "No"]) #index 2
     participantType3 = dlgParticipant3.show()
     
     if dlgParticipant3.OK:
         default = participantType3[2]
-        print(participantType3)
-    
+        print("user chose: " + str(participantType3))
     else:
         core.quit() # the user hit cancel so exit
-        
     
-    try:
-        cd = os.getcwd()
-        df = pd.read_csv(cd + "/" + str(expId) + "/" + str(expId) + "_profile.csv") #read participant profile 
-        
     #check whether previous profile is present
+    try:
+        df = pd.read_csv(cwd + "/" + str(expId) + "/" + str(expId) + "_profile.csv") #read participant profile 
     except:
         print("wrong participant id or threshold profile does not exist")
-        dlgParticipant5 = gui.Dlg(title = expId + " does not exist. Please re-enter participant ID")
-        dlgParticipant5.addField("Participant ID")
-        
+        dlgParticipant5 = gui.Dlg(title="Error in getting profile")
+        dlgParticipant5.addText("ID " + expId + " does not exist. Please re-enter ID at the start.")
         participantType5 = dlgParticipant5.show()
-        
-        if dlgParticipant5.OK:
-            expId = participantType5[0]
-#            print(participantType5)
-        
+            
+    # difficulty setting values for L, M, H ------------
+    # [0] is rotation threshold
+    # [1] is noise threshold
+    L = [df["low"][0], df["low"][1]]
+    M = [df["medium"][0], df["medium"][1]]
+    H = [df["high"][0], df["high"][1]]
     
-    #difficulty setting values for L, M, H
-    L = df["low"].get(0)
-    M = df["medium"].get(0)
-    H = df["high"].get(0)
-    
-    print("[rot,noise]")
+    print("level, rot, noise")
     print("low = " + str(L))
     print("medium = " + str(M))
     print("high = " + str(H))
@@ -433,71 +367,46 @@ elif sessType == "Training":
             core.quit() # the user hit cancel so exit
             
     
-    else:  #user select defualt option option
-        
-        runs = {"run_A" = [L, M, H, M, H, L, H, L, M], "run_B" = [M, L, H, L, H, M, H, M, L], "run_C" = [M, H, L, H, L, M, L, M, H],"run_D" = [L, H, M, H, M, L, M, L, H], "run_E" = [H, L, M, L, M, H, M, H, L],"run_F" = [H, M, L, M, L, H, L, H, M]}
-        
-        if sessNo == 2:
-            sequence = run["run_A"]
-            print(sequence)
-            
-        if sessNo == 3:
-            sequence = run["run_B"]
-            print(sequence)
-            
-        if sessNo == 4:
-            sequence = run["run_C"]
-            print(sequence)
-            
-        if sessNo == 5:
-            sequence = run["run_D"]
-            print(sequence)
-            
-        if sessNo == 6:
-            sequence = run["run_E"]
-            print(sequence)
-            
-        if sessNo == 7:
-            sequence = run["run_F"]
-            print(sequence)
-            
-        if sessNo == 8:
-            sequence = run["run_E"]
-            print(sequence)
-            
-        if sessNo == 9:
-            sequence = run["run_D"]
-            print(sequence)
-            
-        if sessNo == 10:
-            sequence = run["run_C"]
-            print(sequence)
-            
-        if sessNo == 11:
-            sequence = run["run_B"]
-            print(sequence)
-            
-        if sessNo == 12:
-            sequence = run["run_A"]
-            print(sequence)
-            
-        if sessNo == 13:
-            sequence = run["run_F"]
-            print(sequence)
-            
-        if sessNo == 14:
-            sequence = run["run_E"]
-            print(sequence)
-            
-        
-
-    #get details from config file given the session number
-    #
+    else:  # user select default option option
+        runs = {
+                "run_A": [L, M, H, M, H, L, H, L, M], 
+                "run_B": [M, L, H, L, H, M, H, M, L], 
+                "run_C": [M, H, L, H, L, M, L, M, H],
+                "run_D": [L, H, M, H, M, L, M, L, H], 
+                "run_E": [H, L, M, L, M, H, M, H, L],
+                "run_F": [H, M, L, M, L, H, L, H, M]
+                }
+        sequence = []
+        if sessionNo == 2 or sessionNo == 12: sequence = runs["run_A"]
+        elif sessionNo == 3 or sessionNo == 11: sequence = runs["run_B"]
+        elif sessionNo == 4 or sessionNo == 10: sequence = runs["run_C"]
+        elif sessionNo == 5 or sessionNo == 9: sequence = runs["run_D"]
+        elif sessionNo == 6 or sessionNo == 8: sequence = runs["run_E"]
+        elif sessionNo == 7 or sessionNo == 13: sequence = runs["run_F"]
+        elif sessionNo == 8 or sessionNo == 14: sequence = runs["run_E"]
+        print("sequence is " + str(sequence))
     
-#        .
-#        .
-#        .
-#        
-#
-#
-#
+        # start training 
+        # TODO EDIT N PARAMETER
+        nBlocks = 6
+        nTrials = 5
+        # only changing the difficultyNoise
+        for blockNo in range(nBlocks):
+            expInfo["blockNo"] += 1 # updating current block
+            # getting the parameter based on the sequence
+            difficultyRotation = sequence[blockNo][0]
+            difficultyNoise = sequence[blockNo][1]
+
+            for trialNo in range(1, nTrials + 1) : 
+                # get the change in angle
+                tuneRotation(difficultyRotation)
+                # set up the gabor
+                initialNoise, finalNoise = setUpGabor(initialAngle, finalAngle, difficultyNoise)
+                # drawing the gabor
+                drawGabor(fixation, initialGabor, initialNoise, finalGabor, finalNoise)
+                # get response
+                reactionTime, correct = getResponse(responseMessage, clockwise)
+                # write data
+                writeData(expInfo, clockwise, correct, reactionTime, ((blockNo * nTrials) + trialNo), difficultyRotation, difficultyNoise)
+            
+        showEndMessage()
