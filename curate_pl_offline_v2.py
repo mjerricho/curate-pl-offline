@@ -125,20 +125,6 @@ while True:
     else:
         core.quit() # the user hit cancel so exit
 
-# if sessionType is Training, check whether the user wants default or custom setting
-if sessionType == "Training":
-    dlgParticipant2 = gui.Dlg(title = expId + " settings")
-    dlgParticipant2.addFixedField("Session Type: ", sessionType)
-    dlgParticipant2.addFixedField("Session Number: ", sessionNo)
-    dlgParticipant2.addField("Default Training Setting?", choices = ["Yes", "No"]) #index 2
-    participantType2 = dlgParticipant2.show()
-    if dlgParticipant2.OK:
-        default = participantType2[2]
-        print("user chose: " + str(participantType2))
-        # set up parameters for Training
-    else:
-        core.quit() # the user hit cancel so exit
-
 # initialise experiment info and datafile ----------------------------------
 cwd = os.getcwd()
 # making directory, returns an error if directory already exists
@@ -153,7 +139,85 @@ fileName = expInfo['participantId'] + "_" + date.today().strftime("%d_%m_%Y") + 
 dataFile = open(cwd + "/" + str(expId) + "/" + fileName + '.csv', 'w')
 # add columns header
 dataFile.write('dateStr, participantId,clockwise,correct, rt, sessionNo, blockNo, trialNo, rotation, noise, triggerTime, responseStart, responseEnd\n')
-    
+
+# if sessionType is Training, check whether the user wants default or custom setting
+if sessionType == "Training":
+    dlgParticipant2 = gui.Dlg(title = expId + " settings")
+    dlgParticipant2.addFixedField("Session Type: ", sessionType)
+    dlgParticipant2.addFixedField("Session Number: ", sessionNo)
+    dlgParticipant2.addField("Default Training Setting?", choices = ["Yes", "No"]) #index 2
+    participantType2 = dlgParticipant2.show()
+    if dlgParticipant2.OK:
+        default = participantType2[2]
+        print("user chose: " + str(participantType2))
+        
+        # set up parameters for Training ------------------
+        # check whether previous profile is present
+        try:
+            df = pd.read_csv(cwd + "/" + str(expId) + "/" + str(expId) + "_profile.csv") #read participant profile 
+        except:
+            print("wrong participant id or threshold profile does not exist")
+            dlgParticipant5 = gui.Dlg(title="Error in getting profile")
+            dlgParticipant5.addText("ID " + expId + " does not exist. Please re-enter ID at the start.")
+            participantType5 = dlgParticipant5.show()
+                
+        # difficulty setting values for L, M, H ------------
+        # [0] is rotation threshold
+        # [1] is noise threshold
+        L = [df["low"][0], df["low"][1]]
+        M = [df["medium"][0], df["medium"][1]]
+        H = [df["high"][0], df["high"][1]]
+        
+        print("level, rot, noise")
+        print("low = " + str(L))
+        print("medium = " + str(M))
+        print("high = " + str(H))
+            
+        # initialising the sequence based on default or custom input -----------
+        sequence = []
+        # user selected to custom input
+        if default =="No":
+            #getting custom sequence if default is no
+            dlgParticipant4 = gui.Dlg(title = expId + " custom sequence")
+            dlgParticipant4.addText("Please input sequence below e.g L,M,H,L,M,H")
+            dlgParticipant4.addField("Sequence")
+            participantType4 = dlgParticipant4.show()
+            
+            #need to code try and except depend on how u use it
+            if dlgParticipant4.OK:
+                tempSequence = participantType4[0]
+                print(str(tempSequence))
+                print(str(type(tempSequence)))
+                for letter in tempSequence.split(","):
+                    if letter == "L": sequence.append(L)
+                    elif letter == "M": sequence.append(M)
+                    elif letter == "H": sequence.append(H)
+                    else: 
+                        print("Wrong input.")
+                        core.quit()
+            else:
+                core.quit() # the user hit cancel so exit
+        # user selected default option
+        else:  
+            runs = {
+                    "run_A": [L, M, H, M, H, L, H, L, M], 
+                    "run_B": [M, L, H, L, H, M, H, M, L], 
+                    "run_C": [M, H, L, H, L, M, L, M, H],
+                    "run_D": [L, H, M, H, M, L, M, L, H], 
+                    "run_E": [H, L, M, L, M, H, M, H, L],
+                    "run_F": [H, M, L, M, L, H, L, H, M]
+                    }
+            if sessionNo == 2 or sessionNo == 12: sequence = runs["run_A"]
+            elif sessionNo == 3 or sessionNo == 11: sequence = runs["run_B"]
+            elif sessionNo == 4 or sessionNo == 10: sequence = runs["run_C"]
+            elif sessionNo == 5 or sessionNo == 9: sequence = runs["run_D"]
+            elif sessionNo == 6 or sessionNo == 8: sequence = runs["run_E"]
+            elif sessionNo == 7 or sessionNo == 13: sequence = runs["run_F"]
+            elif sessionNo == 8 or sessionNo == 14: sequence = runs["run_E"]
+        print("sequence is " + str(sequence))
+    else:
+        core.quit() # the user hit cancel so exit
+
 # setting up parameters and instructions -----------------------------------
 # create window and stimuli
 win = visual.Window([1500,900],allowGUI=True, monitor='testMonitor', units='deg')
@@ -322,73 +386,8 @@ if sessionType == "Thresholding":
 # dataFile2 = open(cwd + "/" + str(expId) + "/" + fileName2 + '.csv', 'w')  # a simple text file with 'comma-separated-values'
 # dataFile2.write("{low}, {medium}, {high}".format(low = profile["low"], medium = profile["medium"], high = profile["high"]))
     
-# training selected --------------------------------------------------------
+# Training case ------------------------------------------------------------
 elif sessionType == "Training":
-    #check whether previous profile is present
-    try:
-        df = pd.read_csv(cwd + "/" + str(expId) + "/" + str(expId) + "_profile.csv") #read participant profile 
-    except:
-        print("wrong participant id or threshold profile does not exist")
-        dlgParticipant5 = gui.Dlg(title="Error in getting profile")
-        dlgParticipant5.addText("ID " + expId + " does not exist. Please re-enter ID at the start.")
-        participantType5 = dlgParticipant5.show()
-            
-    # difficulty setting values for L, M, H ------------
-    # [0] is rotation threshold
-    # [1] is noise threshold
-    L = [df["low"][0], df["low"][1]]
-    M = [df["medium"][0], df["medium"][1]]
-    H = [df["high"][0], df["high"][1]]
-    
-    print("level, rot, noise")
-    print("low = " + str(L))
-    print("medium = " + str(M))
-    print("high = " + str(H))
-        
-    # initialising the sequence based on default or custom input -----------
-    sequence = []
-    # user selected to custom input
-    if default =="No":
-        #getting custom sequence if default is no
-        dlgParticipant4 = gui.Dlg(title = expId + " custom sequence")
-        dlgParticipant4.addText("Please input sequence below e.g L,M,H,L,M,H")
-        dlgParticipant4.addField("Sequence")
-        participantType4 = dlgParticipant4.show()
-        
-        #need to code try and except depend on how u use it
-        if dlgParticipant4.OK:
-            tempSequence = participantType4[0]
-            print(str(tempSequence))
-            print(str(type(tempSequence)))
-            for letter in tempSequence.split(","):
-                if letter == "L": sequence.append(L)
-                elif letter == "M": sequence.append(M)
-                elif letter == "H": sequence.append(H)
-                else: 
-                    print("Wrong input.")
-                    core.quit()
-        else:
-            core.quit() # the user hit cancel so exit
-    # user selected default option
-    else:  
-        runs = {
-                "run_A": [L, M, H, M, H, L, H, L, M], 
-                "run_B": [M, L, H, L, H, M, H, M, L], 
-                "run_C": [M, H, L, H, L, M, L, M, H],
-                "run_D": [L, H, M, H, M, L, M, L, H], 
-                "run_E": [H, L, M, L, M, H, M, H, L],
-                "run_F": [H, M, L, M, L, H, L, H, M]
-                }
-        if sessionNo == 2 or sessionNo == 12: sequence = runs["run_A"]
-        elif sessionNo == 3 or sessionNo == 11: sequence = runs["run_B"]
-        elif sessionNo == 4 or sessionNo == 10: sequence = runs["run_C"]
-        elif sessionNo == 5 or sessionNo == 9: sequence = runs["run_D"]
-        elif sessionNo == 6 or sessionNo == 8: sequence = runs["run_E"]
-        elif sessionNo == 7 or sessionNo == 13: sequence = runs["run_F"]
-        elif sessionNo == 8 or sessionNo == 14: sequence = runs["run_E"]
-    print("sequence is " + str(sequence))
-    
-    # start training 
     # TODO EDIT PARAMETERS
     nBlocks = 6
     nTrials = 5
