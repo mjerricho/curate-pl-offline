@@ -106,7 +106,7 @@ if dlgId.OK:
 else:
     core.quit() # the user hit cancel so exit
  
-sessType = ""
+sessionType = ""
 sessionNo = None
  
 # ensure the user inserts an integer for the session number
@@ -114,46 +114,54 @@ while True:
     dlgParticipant = gui.Dlg(title = expId + " settings")
     dlgParticipant.addField("Session Type", choices = ["Thresholding", "Training"]) #index 0
     dlgParticipant.addField("Session: ") #index 1
-    
     participantType = dlgParticipant.show()
-
+    # check if user inputs an integer
     if dlgParticipant.OK:
-        sessType = participantType[0]
         if participantType[1].isnumeric() : 
+            sessionType = participantType[0]
             sessionNo = int(participantType[1])
             print(participantType)
             break
     else:
         core.quit() # the user hit cancel so exit
 
+# if sessionType is Training, check whether the user wants default or custom setting
+if sessionType == "Training":
+    dlgParticipant2 = gui.Dlg(title = expId + " settings")
+    dlgParticipant2.addFixedField("Session Type: ", sessionType)
+    dlgParticipant2.addFixedField("Session Number: ", sessionNo)
+    dlgParticipant2.addField("Default Training Setting?", choices = ["Yes", "No"]) #index 2
+    participantType2 = dlgParticipant2.show()
+    if dlgParticipant2.OK:
+        default = participantType2[2]
+        print("user chose: " + str(participantType2))
+        # set up parameters for Training
+    else:
+        core.quit() # the user hit cancel so exit
+
 # initialise experiment info and datafile ----------------------------------
 cwd = os.getcwd()
-try: 
-    os.mkdir(str(expId)) 
-    # making directory, returns an error if directory already exists
-except:
-    pass
+# making directory, returns an error if directory already exists
+try: os.mkdir(str(expId)) 
+except: pass
 
 expInfo = {'participantId': expId, 'sessionNo': sessionNo, "blockNo": 0, 'difficultyRotation': 0, 'difficultyNoise': 0, 'dateStr': data.getDateStr()}
-print("start session no " + str(expInfo['sessionNo']) + ": " + str(expInfo))
+print("Start session no " + str(expInfo['sessionNo']) + ": " + str(expInfo))
 
-# make a csv file to save data -----------------------------------------
+# make a csv file to save data ---------------------------------------------
 fileName = expInfo['participantId'] + "_" + date.today().strftime("%d_%m_%Y") + "_sess_" + str(expInfo['sessionNo'])
 dataFile = open(cwd + "/" + str(expId) + "/" + fileName + '.csv', 'w')
-try: 
-    dataFile.write('dateStr, participantId,clockwise,correct, rt, sessionNo, blockNo, trialNo, rotation, noise, triggerTime, responseStart, responseEnd\n')
-except:
-    print("This session data already exists") # TODO - clarify what to do
+# add columns header
+dataFile.write('dateStr, participantId,clockwise,correct, rt, sessionNo, blockNo, trialNo, rotation, noise, triggerTime, responseStart, responseEnd\n')
     
-# setting up parameters and instructions ---------------------------------
+# setting up parameters and instructions -----------------------------------
 # create window and stimuli
-win = visual.Window([1500,900],allowGUI=True,
-                    monitor='testMonitor', units='deg')
+win = visual.Window([1500,900],allowGUI=True, monitor='testMonitor', units='deg')
 initialGabor = visual.GratingStim(win, sf=1, size=4, mask='gauss')
 finalGabor = visual.GratingStim(win, sf=1, size=4, mask='gauss')
 fixation = visual.GratingStim(win, color=1, colorSpace='rgb', tex=None, mask='cross', size=0.2)
                               
-# and clocks to keep track of time
+# clocks to keep track of time
 globalClock = core.Clock()
 trialClock = core.Clock()
 
@@ -184,7 +192,7 @@ getResponseEnter()
 responseMessage = visual.TextStim(win, pos=[0,0], text="Type response now.\nanti-clockwise (left) or clockwise (right)", units='pix', height=40)
         
 # Thresholding case --------------------------------------------------------
-if sessType == "Thresholding": 
+if sessionType == "Thresholding": 
     # training/testing phase ---------------------------------------------
     difficultyRotation = expInfo['difficultyRotation']
     difficultyNoise = expInfo['difficultyNoise']
@@ -276,6 +284,8 @@ if sessType == "Thresholding":
     expInfo["blockNo"] += 1 #adding 1 to current block
     
     # only changing the difficultyNoise
+    # TODO - do we need to reset streak for the other block?
+    streak = 0
     for trialNo in range(1, nTrials + 1) : 
         # get the change in angle
         tuneRotation(difficultyRotation)
@@ -286,7 +296,7 @@ if sessType == "Thresholding":
         # get response
         reactionTime, correct = getResponse(responseMessage, clockwise)
         # write data
-        writeData(expInfo, clockwise, correct, reactionTime, trialNo, difficultyRotation, difficultyNoise)
+        writeData(expInfo, clockwise, correct, reactionTime, nTrials + trialNo, difficultyRotation, difficultyNoise)
         # updating global parameters
         if correct:
             if streak == 2: 
@@ -311,24 +321,9 @@ if sessType == "Thresholding":
 # backup
 # dataFile2 = open(cwd + "/" + str(expId) + "/" + fileName2 + '.csv', 'w')  # a simple text file with 'comma-separated-values'
 # dataFile2.write("{low}, {medium}, {high}".format(low = profile["low"], medium = profile["medium"], high = profile["high"]))
-        
-    showEndMessage()
     
 # training selected --------------------------------------------------------
-elif sessType == "Training":
-    # asking for whether the participant/experimenter want a default setting or not
-    dlgParticipant3 = gui.Dlg(title = expId + " settings")
-    dlgParticipant3.addFixedField("Session Type: ", sessType)
-    dlgParticipant3.addFixedField("Session Number: ", sessionNo)
-    dlgParticipant3.addField("Default Training Setting?", choices = ["Yes", "No"]) #index 2
-    participantType3 = dlgParticipant3.show()
-    
-    if dlgParticipant3.OK:
-        default = participantType3[2]
-        print("user chose: " + str(participantType3))
-    else:
-        core.quit() # the user hit cancel so exit
-    
+elif sessionType == "Training":
     #check whether previous profile is present
     try:
         df = pd.read_csv(cwd + "/" + str(expId) + "/" + str(expId) + "_profile.csv") #read participant profile 
@@ -350,24 +345,32 @@ elif sessType == "Training":
     print("medium = " + str(M))
     print("high = " + str(H))
         
+    # initialising the sequence based on default or custom input -----------
+    sequence = []
+    # user selected to custom input
     if default =="No":
         #getting custom sequence if default is no
         dlgParticipant4 = gui.Dlg(title = expId + " custom sequence")
         dlgParticipant4.addText("Please input sequence below e.g L,M,H,L,M,H")
-        dlgParticipant4.addField("Default Setting")
-        
+        dlgParticipant4.addField("Sequence")
         participantType4 = dlgParticipant4.show()
         
         #need to code try and except depend on how u use it
         if dlgParticipant4.OK:
-            sequence = participantType4[0]
-            print(participantType4)
-        
+            tempSequence = participantType4[0]
+            print(str(tempSequence))
+            print(str(type(tempSequence)))
+            for letter in tempSequence.split(","):
+                if letter == "L": sequence.append(L)
+                elif letter == "M": sequence.append(M)
+                elif letter == "H": sequence.append(H)
+                else: 
+                    print("Wrong input.")
+                    core.quit()
         else:
             core.quit() # the user hit cancel so exit
-            
-    
-    else:  # user select default option option
+    # user selected default option
+    else:  
         runs = {
                 "run_A": [L, M, H, M, H, L, H, L, M], 
                 "run_B": [M, L, H, L, H, M, H, M, L], 
@@ -376,7 +379,6 @@ elif sessType == "Training":
                 "run_E": [H, L, M, L, M, H, M, H, L],
                 "run_F": [H, M, L, M, L, H, L, H, M]
                 }
-        sequence = []
         if sessionNo == 2 or sessionNo == 12: sequence = runs["run_A"]
         elif sessionNo == 3 or sessionNo == 11: sequence = runs["run_B"]
         elif sessionNo == 4 or sessionNo == 10: sequence = runs["run_C"]
@@ -384,29 +386,28 @@ elif sessType == "Training":
         elif sessionNo == 6 or sessionNo == 8: sequence = runs["run_E"]
         elif sessionNo == 7 or sessionNo == 13: sequence = runs["run_F"]
         elif sessionNo == 8 or sessionNo == 14: sequence = runs["run_E"]
-        print("sequence is " + str(sequence))
+    print("sequence is " + str(sequence))
     
-        # start training 
-        # TODO EDIT N PARAMETER
-        nBlocks = 6
-        nTrials = 5
-        # only changing the difficultyNoise
-        for blockNo in range(nBlocks):
-            expInfo["blockNo"] += 1 # updating current block
-            # getting the parameter based on the sequence
-            difficultyRotation = sequence[blockNo][0]
-            difficultyNoise = sequence[blockNo][1]
-
-            for trialNo in range(1, nTrials + 1) : 
-                # get the change in angle
-                tuneRotation(difficultyRotation)
-                # set up the gabor
-                initialNoise, finalNoise = setUpGabor(initialAngle, finalAngle, difficultyNoise)
-                # drawing the gabor
-                drawGabor(fixation, initialGabor, initialNoise, finalGabor, finalNoise)
-                # get response
-                reactionTime, correct = getResponse(responseMessage, clockwise)
-                # write data
-                writeData(expInfo, clockwise, correct, reactionTime, ((blockNo * nTrials) + trialNo), difficultyRotation, difficultyNoise)
+    # start training 
+    # TODO EDIT PARAMETERS
+    nBlocks = 6
+    nTrials = 5
+    # only changing the difficultyNoise
+    for blockNo in range(nBlocks):
+        expInfo["blockNo"] += 1 # updating current block
+        # getting the parameter based on the sequence
+        difficultyRotation = sequence[blockNo][0]
+        difficultyNoise = sequence[blockNo][1]
+        for trialNo in range(1, nTrials + 1) : 
+            # get the change in angle
+            tuneRotation(difficultyRotation)
+            # set up the gabor
+            initialNoise, finalNoise = setUpGabor(initialAngle, finalAngle, difficultyNoise)
+            # drawing the gabor
+            drawGabor(fixation, initialGabor, initialNoise, finalGabor, finalNoise)
+            # get response
+            reactionTime, correct = getResponse(responseMessage, clockwise)
+            # write data
+            writeData(expInfo, clockwise, correct, reactionTime, ((blockNo * nTrials) + trialNo), difficultyRotation, difficultyNoise)
             
-        showEndMessage()
+showEndMessage()

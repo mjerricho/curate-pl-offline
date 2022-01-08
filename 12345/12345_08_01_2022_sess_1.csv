@@ -1,1 +1,11 @@
 dateStr, participantId,clockwise,correct, rt, sessionNo, blockNo, trialNo, rotation, noise, triggerTime, responseStart, responseEnd
+2022_Jan_08_2222, 12345, False, True, 0.29716856199956965, 1, 1, 1, 0, 0, NA, NA, NA
+2022_Jan_08_2222, 12345, True, True, 0.19328212899927166, 1, 1, 2, 0, 0, NA, NA, NA
+2022_Jan_08_2222, 12345, False, True, 0.2367894079980033, 1, 1, 3, 0, 0, NA, NA, NA
+2022_Jan_08_2222, 12345, False, True, 0.2290427349980746, 1, 1, 4, 1, 0, NA, NA, NA
+2022_Jan_08_2222, 12345, False, True, 0.31156584299969836, 1, 1, 5, 1, 0, NA, NA, NA
+2022_Jan_08_2222, 12345, False, True, 0.15143192799951066, 1, 2, 6, 0, 0, NA, NA, NA
+2022_Jan_08_2222, 12345, True, True, 0.19058983699869714, 1, 2, 7, 0, 1, NA, NA, NA
+2022_Jan_08_2222, 12345, True, True, 1.0039530680005555, 1, 2, 8, 0, 1, NA, NA, NA
+2022_Jan_08_2222, 12345, False, True, 0.25104159799957415, 1, 2, 9, 0, 1, NA, NA, NA
+2022_Jan_08_2222, 12345, False, True, 0.09606970999811892, 1, 2, 10, 0, 2, NA, NA, NA
