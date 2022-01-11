@@ -1,0 +1,2 @@
+dateStr, participantId,clockwise,correct, rt, sessionNo, blockNo, trialNo, rotation, noise, triggerTime, responseStart, responseEnd
+2022_Jan_10_1109, 1123123, True, False, 1.961867600000005, 1, 1, 1, 0, 0, NA, NA, NA

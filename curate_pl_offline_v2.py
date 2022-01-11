@@ -22,6 +22,7 @@ def tuneRotation(difficultyRotation):
 
 # setting up noise parameters
 def setUpGabor(initialAngle, finalAngle, difficultyNoise):
+    #TODO: get image of right and wrong, the correctness of the answers
     global initialGabor
     global finalGabor
     # TODO - opacity needs revision
@@ -72,7 +73,15 @@ def getResponse(responseMessage, clockwise):
     return reactionTime, correct
     
 # write a function to expect an enter 
-def getResponseEnter() : 
+def getResponseEnter() : #get time of enter keys
+    global timer
+    global triggerTime 
+    if timer == None: #timer only start running after the first enter is given by scanner. 
+        triggerTime = 0
+        
+    else: #since timer has been defined, trigger time is directly obtained from the timer 
+        triggerTime = timer.getTime()
+            
     while True:
         response = event.waitKeys()
         print(response[0])
@@ -81,10 +90,10 @@ def getResponseEnter() :
         elif response[0] == 'q':
             core.quit()
     
-def writeData(expInfo, clockwise, correct, reactionTime, trialNo, difficultyRotation, difficultyNoise): 
+def writeData(expInfo, clockwise, correct, reactionTime, trialNo, difficultyRotation, difficultyNoise, triggerTime): 
     global dataFile
-    dataFile.write('{dateStr}, {participantId}, {clockwise}, {correct}, {reactionTime}, {sessionNo}, {blockNo}, {trialNo}, {rotation}, {noise}, NA, NA, NA\n'.format(dateStr = expInfo['dateStr'], participantId = expInfo['participantId'], clockwise = (clockwise == 1), correct = correct, reactionTime = reactionTime, sessionNo = expInfo['sessionNo'], blockNo = expInfo['blockNo'], trialNo = trialNo, rotation = difficultyRotation, noise = difficultyNoise))
-    print('{dateStr}, {participantId}, {clockwise}, {correct}, {reactionTime}, {sessionNo}, {blockNo}, {trialNo}, {rotation}, {noise}, NA, NA, NA\n'.format(dateStr = expInfo['dateStr'], participantId = expInfo['participantId'], clockwise = (clockwise == 1), correct = correct, reactionTime = reactionTime, sessionNo = expInfo['sessionNo'], blockNo = expInfo['blockNo'], trialNo = trialNo, rotation = difficultyRotation, noise = difficultyNoise))
+    dataFile.write('{dateStr}, {participantId}, {clockwise}, {correct}, {reactionTime}, {sessionNo}, {blockNo}, {trialNo}, {rotation}, {noise}, {trigTime}, NA, NA\n'.format(dateStr = expInfo['dateStr'], participantId = expInfo['participantId'], clockwise = (clockwise == 1), correct = correct, reactionTime = reactionTime, sessionNo = expInfo['sessionNo'], blockNo = expInfo['blockNo'], trialNo = trialNo, rotation = difficultyRotation, noise = difficultyNoise, trigTime = triggerTime))
+    print('{dateStr}, {participantId}, {clockwise}, {correct}, {reactionTime}, {sessionNo}, {blockNo}, {trialNo}, {rotation}, {noise}, {trigTime}, NA, NA\n'.format(dateStr = expInfo['dateStr'], participantId = expInfo['participantId'], clockwise = (clockwise == 1), correct = correct, reactionTime = reactionTime, sessionNo = expInfo['sessionNo'], blockNo = expInfo['blockNo'], trialNo = trialNo, rotation = difficultyRotation, noise = difficultyNoise, trigTime = triggerTime))
 
 # end message
 def showEndMessage(): 
@@ -108,6 +117,11 @@ else:
  
 sessionType = ""
 sessionNo = None
+
+timer = None
+triggerTime = None
+
+
  
 # ensure the user inserts an integer for the session number
 while True:
@@ -262,36 +276,42 @@ if sessionType == "Thresholding":
     difficultyNoise = expInfo['difficultyNoise']
     streak = 0
     
+    
     # angle parameters  
     clockwise = 0
     initialAngle = 0
     deltaAngle = 0
     finalAngle = 0
         
-    # warm up TODO - should we do more than one? we can use for-loop
+    # warm up TODO - should we do more than one? we can use for-loop. Yes we need to loop 6 times
     warmupMessage = visual.TextStim(win, pos=[0,0], text="This is just a warm up trial.", units='pix', height=50)
     warmupMessage.draw()
     win.flip()
     core.wait(1)
-    # get the change in angle
-    tuneRotation(difficultyRotation)
-    # set up the gabor
-    initialNoise, finalNoise = setUpGabor(initialAngle, finalAngle, difficultyNoise)
-    # drawing the gabor
-    drawGabor(fixation, initialGabor, initialNoise, finalGabor, finalNoise)
-    # get response
-    reactionTime, correct = getResponse(responseMessage, clockwise)
-    # check if response is correct
-    if correct: 
-        correctMessage = visual.TextStim(win, pos=[0,0], text="Correct response.", units='pix', height=50)
-        correctMessage.draw()
-        win.flip()
-        core.wait(1)
-    else: 
-        falseMessage = visual.TextStim(win, pos=[0,0], text="Wrong response.", units='pix', height=50)
-        falseMessage.draw()
-        win.flip()
-        core.wait(1)
+    
+    warmupN = 6
+     
+    #looping practice trials for n times
+    for i in range(1,  warmupN+1):
+        # get the change in angle
+        tuneRotation(difficultyRotation)
+        # set up the gabor
+        initialNoise, finalNoise = setUpGabor(initialAngle, finalAngle, difficultyNoise)
+        # drawing the gabor
+        drawGabor(fixation, initialGabor, initialNoise, finalGabor, finalNoise)
+        # get response
+        reactionTime, correct = getResponse(responseMessage, clockwise)
+        # check if response is correct
+        if correct: 
+            correctMessage = visual.TextStim(win, pos=[0,0], text="Correct response.", units='pix', height=50)
+            correctMessage.draw()
+            win.flip()
+            core.wait(1)
+        else: 
+            falseMessage = visual.TextStim(win, pos=[0,0], text="Wrong response.", units='pix', height=50)
+            falseMessage.draw()
+            win.flip()
+            core.wait(1)
         
     # start session -----
     # TODO - EDIT N PARAMETER
@@ -304,6 +324,15 @@ if sessionType == "Thresholding":
     
     expInfo["blockNo"] += 1 #adding 1 to current block
     
+    #trigger response creation
+    
+    scannerMessage = visual.TextStim(win, pos=[0,0], text="Waiting for scanner trigger", units='pix', height=50)
+    scannerMessage.draw()
+    win.flip()
+    getResponseEnter()
+    
+    timer = core.Clock()
+    
     # only changing the difficultyRotation
     for trialNo in range(1, nTrials + 1) : 
         # get the change in angle
@@ -315,7 +344,8 @@ if sessionType == "Thresholding":
         # get response
         reactionTime, correct = getResponse(responseMessage, clockwise)
         # write data
-        writeData(expInfo, clockwise, correct, reactionTime, trialNo, difficultyRotation, difficultyNoise)
+        writeData(expInfo, clockwise, correct, reactionTime, trialNo, difficultyRotation, difficultyNoise, triggerTime)
+        triggerTime = timer.getTime()
         # updating global parameters
         if correct:
             if streak == 2: 
@@ -335,9 +365,11 @@ if sessionType == "Thresholding":
     win.flip()
     getResponseEnter()
     
+    core.wait(3)
+    
     message8 = visual.TextStim(win, pos=[0,0], text="Starting Block 2", units='pix', height=30)
     message8.draw()
-    core.wait(1)
+    core.wait(3)
     win.flip()
     
     #starting block 2/ thresholding for noise --------
@@ -348,7 +380,7 @@ if sessionType == "Thresholding":
     expInfo["blockNo"] += 1 #adding 1 to current block
     
     # only changing the difficultyNoise
-    # TODO - do we need to reset streak for the other block?
+    
     streak = 0
     for trialNo in range(1, nTrials + 1) : 
         # get the change in angle
@@ -360,7 +392,8 @@ if sessionType == "Thresholding":
         # get response
         reactionTime, correct = getResponse(responseMessage, clockwise)
         # write data
-        writeData(expInfo, clockwise, correct, reactionTime, nTrials + trialNo, difficultyRotation, difficultyNoise)
+        writeData(expInfo, clockwise, correct, reactionTime, nTrials + trialNo, difficultyRotation, difficultyNoise, triggerTime)
+        triggerTime = timer.getTime()
         # updating global parameters
         if correct:
             if streak == 2: 
@@ -390,14 +423,46 @@ if sessionType == "Thresholding":
 elif sessionType == "Training":
     # TODO EDIT PARAMETERS
     nBlocks = 6
+    
     nTrials = 5
+    
+    
     # only changing the difficultyNoise
+    
+    difficultyRotation = L[0]
+    difficultyNoise = L[1]
+    
+    scannerMessage = visual.TextStim(win, pos=[0,0], text="Waiting for scanner trigger", units='pix', height=50)
+    scannerMessage.draw()
+    win.flip()
+    getResponseEnter()
+    
+    timer = core.Clock()
+    
+    n_Ltrials = 6
+    blockNo = 0
+    for trialNo in range(1, n_Ltrials + 1):
+        # get the change in angle
+        tuneRotation(difficultyRotation)
+        # set up the gabor
+        initialNoise, finalNoise = setUpGabor(initialAngle, finalAngle, difficultyNoise)
+        # drawing the gabor
+        drawGabor(fixation, initialGabor, initialNoise, finalGabor, finalNoise)
+        # get response
+        reactionTime, correct = getResponse(responseMessage, clockwise)
+        # write data
+        #TODO: check with alvin whether he want's trial number to be counted as cumulative. 
+        writeData(expInfo, clockwise, correct, reactionTime, ((blockNo * nTrials) + trialNo), difficultyRotation, difficultyNoise, triggerTime)
+        scannerMessage.draw()
+        win.flip()
+        getResponseEnter()
+    
     for blockNo in range(nBlocks):
         expInfo["blockNo"] += 1 # updating current block
         # getting the parameter based on the sequence
         difficultyRotation = sequence[blockNo][0]
         difficultyNoise = sequence[blockNo][1]
-        for trialNo in range(1, nTrials + 1) : 
+        for trialNo in range(1 + 6, nTrials + 1 + 6) : #plus 6 due to the first 6 trials being the 6 L trials
             # get the change in angle
             tuneRotation(difficultyRotation)
             # set up the gabor
@@ -407,6 +472,12 @@ elif sessionType == "Training":
             # get response
             reactionTime, correct = getResponse(responseMessage, clockwise)
             # write data
-            writeData(expInfo, clockwise, correct, reactionTime, ((blockNo * nTrials) + trialNo), difficultyRotation, difficultyNoise)
+            #TODO: check with alvin whether he want's trial number to be counted as cumulative. 
+            writeData(expInfo, clockwise, correct, reactionTime, ((blockNo * nTrials) + trialNo), difficultyRotation, difficultyNoise, triggerTime)
+            scannerMessage.draw()
+            win.flip()
+            getResponseEnter()
+            
+            
             
 showEndMessage()
